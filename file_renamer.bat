@@ -281,12 +281,34 @@ if /i "%DRY_RUN%"=="true" (
 :: ===================================================
 :LOWERCASE
 set "STR=!%1!"
-for %%L in (a b c d e f g h i j k l m n o p q r s t u v w x y z) do (
-    set "CHAR=%%L"
-    for %%U in (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-        if "%%U"=="%%L" set "STR=!STR:%%U=%%L!"
-    )
-)
+
+set "STR=!STR:A=a!"
+set "STR=!STR:B=b!"
+set "STR=!STR:C=c!"
+set "STR=!STR:D=d!"
+set "STR=!STR:E=e!"
+set "STR=!STR:F=f!"
+set "STR=!STR:G=g!"
+set "STR=!STR:H=h!"
+set "STR=!STR:I=i!"
+set "STR=!STR:J=j!"
+set "STR=!STR:K=k!"
+set "STR=!STR:L=l!"
+set "STR=!STR:M=m!"
+set "STR=!STR:N=n!"
+set "STR=!STR:O=o!"
+set "STR=!STR:P=p!"
+set "STR=!STR:Q=q!"
+set "STR=!STR:R=r!"
+set "STR=!STR:S=s!"
+set "STR=!STR:T=t!"
+set "STR=!STR:U=u!"
+set "STR=!STR:V=v!"
+set "STR=!STR:W=w!"
+set "STR=!STR:X=x!"
+set "STR=!STR:Y=y!"
+set "STR=!STR:Z=z!"
+
 set "%1=!STR!"
 exit /b
 
