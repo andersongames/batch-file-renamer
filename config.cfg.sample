@@ -1,0 +1,6 @@
+SOURCE_DIR=C:\batch-file-renamer
+EXTENSIONS=
+REMOVE_WORDS=
+REPLACE_SPACE=false
+ADD_ZERO=true
+DRY_RUN=false

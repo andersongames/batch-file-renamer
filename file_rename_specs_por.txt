@@ -1,0 +1,173 @@
+================================================================================
+ESPECIFICAÇÃO TÉCNICA DO AUTOMAÇÃO
+RENOMEADOR CONDICIONAL DE ARQUIVOS
+OBJETIVO GERAL
+
+Criar um script em lote (Windows Batch .bat) capaz de percorrer recursivamente
+um diretório e subdiretórios para padronizar e renomear arquivos. O script deve
+aplicar filtros de extensão, remoção de palavras, normalização de caracteres,
+formatação de números e tratamento seguro de colisões e exceções com registro
+completo em arquivo de log.
+
+CONFIGURAÇÕES E ARQUIVO CONFIG.CFG
+
+O script deve ler o arquivo "config.cfg" no mesmo diretório de sua execução.
+Caso o arquivo não exista, deve ser gerado automaticamente com os valores padrão.
+
+Parâmetros do config.cfg:
+
+SOURCE_DIR    : Diretório raiz para varredura.
+[Padrão: Mesma pasta do script]
+
+EXTENSIONS    : Lista de extensões a processar, separadas por vírgulas.
+[Padrão: Vazio / Todas as extensões]
+
+REMOVE_WORDS  : Lista de palavras/expressões a remover, separadas por vírgulas.
+[Padrão: Vazio]
+
+REPLACE_SPACE : Define se espaços devem virar underline (true/false).
+[Padrão: false]
+
+ADD_ZERO      : Define se adiciona zero à esquerda de dígitos 1-9 (true/false).
+[Padrão: true]
+
+DRY_RUN       : Simula as alterações sem renomear arquivos reais (true/false).
+[Padrão: false]
+
+Exemplo de formato do config.cfg:
+SOURCE_DIR=C:\MeusVideos
+EXTENSIONS=mp4, mkv, avi
+REMOVE_WORDS=[exemplo.com], [outro.site], 720p, termo com espaco
+REPLACE_SPACE=true
+ADD_ZERO=true
+DRY_RUN=false
+
+REGRAS TÉCNICAS E TRATAMENTO DE STRING
+
+Case Sensitivity:
+A checagem de extensões ignora maiúsculas e minúsculas (.mp4 equivale a .MP4).
+A conversão do NOME do arquivo para minúsculas é feita antes da remoção das
+palavras para garantir a correspondência (match). As palavras a remover do CFG
+também são tratadas como minúsculas.
+
+Isolamento da Extensão:
+O processo de sanitização e renomeação é aplicado EXCLUSIVAMENTE ao nome do
+arquivo. A extensão deve ser isolada no início e reanexada ao final sem sofrer
+nenhuma alteração.
+
+Caracteres Especiais e Codificação:
+Uso obrigatório do comando "chcp 65001 > nul" para garantir suporte nativo a
+UTF-8 e acentuação. Manipulação segura no Batch contra caracteres perigosos
+como [], (), % e ! no nome dos arquivos.
+
+FLUXO DE EXECUÇÃO DO SCRIPT (PASSO A PASSO)
+
+FASE A: INICIALIZAÇÃO E AMBIENTE
+
+Define a codificação UTF-8 (CHCP 65001).
+
+Verifica a existência do "log.txt" (ou cria se nao existir, o log nao de sessões anteriores nao deve ser limpo).
+
+Verifica se "config.cfg" existe. Se não existir, gera com os valores padrão.
+
+Carrega e valida os parâmetros do "config.cfg".
+
+Valida se o "SOURCE_DIR" informado existe. Se não existir, registra o erro
+no log e interrompe a execução.
+
+FASE B: VARREDURA DE ARQUIVOS
+
+Varre recursivamente (pasta raiz e subpastas) o diretório "SOURCE_DIR".
+
+Filtra cada arquivo encontrado:
+
+Se EXTENSIONS estiver definido no CFG, processa apenas arquivos que
+correspondam à lista.
+
+Se EXTENSIONS estiver vazio, processa todos os arquivos.
+
+FASE C: PROCESSAMENTO DO NOME DO ARQUIVO (SANTIZAÇÃO E MUTAÇÃO)
+Para cada arquivo elegível, separa o NOME da EXTENSÃO e executa as seguintes
+transformações em ordem estrita:
+
+Passo C1 - Padronização de Caixa:
+Converte o nome do arquivo para letras minúsculas.
+
+Passo C2 - Remoção de Palavras (REMOVE_WORDS):
+Busca e remove do nome do arquivo todas as ocorrências das palavras ou frases
+definidas no CFG (incluindo espaços internos contidos na palavra do CFG).
+
+Passo C3 - Adição de Zero à Esquerda (ADD_ZERO = true):
+Identifica conjuntos numéricos de 1 único dígito de '1' a '9'.
+Transforma dígitos de 1 a 9 em 01 a 09 (exemplo: "nome 2" vira "nome 02",
+"item1" vira "item01").
+EXCEÇÕES REGULAMENTADAS:
+- O dígito '0' isolado NÃO é alterado.
+- Números de dois ou mais dígitos (ex: "02", "10", "100") NÃO são alterados.
+
+Passo C4 - Limpeza de Espaços Residuais:
+Remove espaços em branco no início (leading) e no final (trailing) do nome.
+Reduz múltiplos espaços consecutivos em um único espaço ("  " vira " ").
+
+Passo C5 - Substituição por Underline (REPLACE_SPACE = true):
+Substitui todos os espaços do nome por underline ("_").
+Reduz múltiplos underlines consecutivos em um único ("__" vira "_").
+
+FASE D: VALIDAÇÃO DE MUTAÇÃO E COLISÃO
+
+Reanexa a extensão original ao novo nome processado.
+
+Comparação de Nome:
+
+Se o NOME NOVO for exatamente IGUAL ao NOME ATUAL:
+Ação: Pula o arquivo (SKIP). Registra no log como [SKIPPED/UNCHANGED].
+
+Checagem de Existência e Colisão:
+
+Se o NOME NOVO já existir no mesmo diretório (outro arquivo com esse nome):
+Ação: Pula o arquivo (SKIP). Registra no log como [SKIP/COLLISION].
+
+FASE E: APLICAÇÃO E REGISTRO (EXECUÇÃO / DRY-RUN)
+
+Se DRY_RUN = true:
+Não altera o arquivo. Exibe na tela e grava no log o resultado simulado:
+[DRY-RUN] "NomeAntigo.mp4" -> "NomeNovo.mp4"
+
+Se DRY_RUN = false:
+Executa a renomeação (comando REN).
+
+Em caso de SUCESSO:
+Registra no log: [SUCCESS] "NomeAntigo.mp4" -> "NomeNovo.mp4"
+
+Em caso de FALHA/ERRO DE SISTEMA:
+Captura o erro, pula para o próximo arquivo e registra no log:
+[ERROR] Failed to rename "NomeAntigo.mp4"
+
+FASE F: FINALIZAÇÃO
+
+Finaliza a varredura de todos os arquivos.
+
+Grava o resumo da sessão no log.txt (Total processados, renomeados, pultados e erros).
+
+Exibe mensagem de conclusão no console e encerra.
+
+REGISTRO DE LOG (LOG.TXT)
+
+O arquivo "log.txt" deve conter marcação de data/hora no início e término da
+sessão, registrando cada ação individual com os seguintes prefixos padronizados:
+
+[NOTICE]           : Eventos de inicialização (ex: criação do config.cfg).
+
+[DRY-RUN]          : Alteração simulada que seria feita no arquivo.
+
+[SUCCESS]          : Arquivo renomeado com sucesso.
+
+[SKIPPED/UNCHANGED]: Arquivo processado, mas não exigiu alterações.
+
+[SKIP/COLLISION]   : Alteração cancelada porque o arquivo de destino já existe.
+
+[ERROR]            : Falha durante o processo de renomeação.
+
+[CRITICAL]         : Interrupção por erro de configuração ou diretório inválido.
+
+================================================================================
