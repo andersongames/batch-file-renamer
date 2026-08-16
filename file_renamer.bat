@@ -186,7 +186,7 @@ if defined REMOVE_WORDS_LOWER (
         for /f "tokens=*" %%S in ("!WORD_TO_REMOVE!") do set "WORD_TO_REMOVE=%%S"
         
         if defined WORD_TO_REMOVE (
-            set "NEW_NAME=!NEW_NAME:%WORD_TO_REMOVE%=!"
+            call set "NEW_NAME=%%NEW_NAME:!WORD_TO_REMOVE!=%%"
         )
         if defined WORDS_TEMP goto :REMOVE_LOOP
     )
@@ -255,18 +255,25 @@ if /i "%DRY_RUN%"=="true" (
     echo [%date% !time!] [DRY-RUN] "!OLD_FULL_FILENAME!" -^> "!FINAL_NEW_FILENAME!" >> "%LOG_FILE%"
     set /a TOTAL_RENAMED+=1
 ) else (
-    ren "!WORKING_DIR!!OLD_FULL_FILENAME!" "!FINAL_NEW_FILENAME!" >nul 2>&1
-    if !errorlevel! equ 0 (
+    if not exist "!FILE_FULL_PATH!" (
+        echo [ERROR] Source file no longer exists: "!FILE_FULL_PATH!"
+        echo [%date% !time!] [ERROR] Source file no longer exists: "!FILE_FULL_PATH!" >> "%LOG_FILE%"
+        set /a TOTAL_ERRORS+=1
+        exit /b
+    )
+
+    ren "!FILE_FULL_PATH!" "!FINAL_NEW_FILENAME!" >nul 2>&1
+
+    if errorlevel 1 (
+        echo [ERROR] Failed to rename "!FILE_FULL_PATH!"
+        echo [%date% !time!] [ERROR] Failed to rename "!FILE_FULL_PATH!" - Working Dir: "!WORKING_DIR!" >> "%LOG_FILE%"
+        set /a TOTAL_ERRORS+=1
+    ) else (
         echo [SUCCESS] "!OLD_FULL_FILENAME!" -^> "!FINAL_NEW_FILENAME!"
         echo [%date% !time!] [SUCCESS] "!OLD_FULL_FILENAME!" -^> "!FINAL_NEW_FILENAME!" >> "%LOG_FILE%"
         set /a TOTAL_RENAMED+=1
-    ) else (
-        echo [ERROR] Failed to rename "!FILE_FULL_PATH!" - Reason: !CMD_ERR!
-        echo [%date% !time!] [ERROR] Failed to rename "!FILE_FULL_PATH!" - Reason: !CMD_ERR! - Working Dir: "!WORKING_DIR!" >> "%LOG_FILE%"
-        set /a TOTAL_ERRORS+=1
     )
 )
-exit /b
 
 
 :: ===================================================
