@@ -113,21 +113,25 @@ for /R "%SOURCE_DIR%" %%F in (*) do (
 
         set "PROCESS_THIS_FILE=0"
 
-        if "%EXTENSIONS%"=="" (
-            set "PROCESS_THIS_FILE=1"
-        ) else (
-            set "CURR_EXT=%%~xF"
-            if "!CURR_EXT:~0,1!"=="." set "CURR_EXT=!CURR_EXT:~1!"
-            call :LOWERCASE CURR_EXT
-            
-            for %%X in (!EXT_LIST_LOWER!) do (
-                if ".!CURR_EXT!"=="%%X" set "PROCESS_THIS_FILE=1"
-            )
-        )
+        :: Ignore the script itself, the log, and the configuration file.
+        if /i not "%%~nxF"=="%~nx0" if /i not "%%~fF"=="%LOG_FILE%" if /i not "%%~fF"=="%CONFIG_FILE%" (
 
-        if "!PROCESS_THIS_FILE!"=="1" (
-            set /a TOTAL_PROCESSED+=1
-            call :PROCESS_FILE "%%~fF"
+            if "%EXTENSIONS%"=="" (
+                set "PROCESS_THIS_FILE=1"
+            ) else (
+                set "CURR_EXT=%%~xF"
+                if "!CURR_EXT:~0,1!"=="." set "CURR_EXT=!CURR_EXT:~1!"
+                call :LOWERCASE CURR_EXT
+                
+                for %%X in (!EXT_LIST_LOWER!) do (
+                    if ".!CURR_EXT!"=="%%X" set "PROCESS_THIS_FILE=1"
+                )
+            )
+
+            if "!PROCESS_THIS_FILE!"=="1" (
+                set /a TOTAL_PROCESSED+=1
+                call :PROCESS_FILE "%%~fF"
+            )
         )
     )
 )
@@ -257,8 +261,8 @@ if /i "%DRY_RUN%"=="true" (
         echo [%date% !time!] [SUCCESS] "!OLD_FULL_FILENAME!" -^> "!FINAL_NEW_FILENAME!" >> "%LOG_FILE%"
         set /a TOTAL_RENAMED+=1
     ) else (
-        echo [ERROR] Failed to rename "!OLD_FULL_FILENAME!"
-        echo [%date% !time!] [ERROR] Failed to rename "!OLD_FULL_FILENAME!" >> "%LOG_FILE%"
+        echo [ERROR] Failed to rename "!FILE_FULL_PATH!" - Reason: !CMD_ERR!
+        echo [%date% !time!] [ERROR] Failed to rename "!FILE_FULL_PATH!" - Reason: !CMD_ERR! - Working Dir: "!WORKING_DIR!" >> "%LOG_FILE%"
         set /a TOTAL_ERRORS+=1
     )
 )
